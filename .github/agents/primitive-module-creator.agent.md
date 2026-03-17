@@ -11,7 +11,7 @@ This document provides context and instructions for AI coding assistants working
 
 ## Changelog
 
-- **1.8** – Added guidance from iterative module creation: Terraform reserved variable names (avoid `source`, `target`), resource naming module API (instance_env/instance_resource are numbers; cloud_resource_type must be alphanumeric), validation block null handling (use ternary), provider schema verification for outputs, example outputs must match test expectations, Regula/Conftest pre-check, go mod tidy for new SDK deps, common Regula rules (e.g., SQS+KMS).
+- **1.8** – Added guidance from iterative module creation: Terraform reserved variable names (avoid `source`, `target`), resource naming module API (instance_env/instance_resource are numbers; cloud_resource_type must be alphanumeric), validation block null handling (use ternary), provider schema verification for outputs, example outputs must match test expectations, Regula/Conftest pre-check, go mod tidy for new SDK deps, common Regula rules (e.g., SQS+KMS). Added requirement to run full example validation flow (tflint, init, validate, plan, apply, destroy) before implementing tests. Added Terratest / Go code quality review (golangci-lint, go get -u ./..., go mod tidy, go build) before running tests.
 - **1.7** – Strengthened frequently-violated requirements based on multi-model trial feedback: added Critical Requirements Checklist, added WRONG/RIGHT examples for test assertions and functional vs readonly tests, added explicit example README accuracy requirements with examples, strengthened security verification requirements, added Pre-Submission Validation Checklist, expanded Makefile skeleton cleanup, clarified output `id` description for resources where id equals another attribute.
 - **1.6** – Strengthened guidance based on trial feedback: added explicit skeleton TODO/placeholder cleanup, readonly test differentiation, terraform-docs generation step, output description requirement, input validation requirements for bounded numerics, mutually exclusive parameter handling, security-first example defaults (KMS/Regula), output naming convention, and example completeness expectations.
 - **1.5** – Added notes about security-first defaults and checking files for references to skeleton and templates during cleanup.
@@ -658,6 +658,45 @@ module "postgres" {  # or "bucket", "lambda", etc.
 - **Regula/Conftest:** Run `make check` before finalizing. Common Regula rules: AWS SQS queues require KMS encryption (FG_R00070) — add `aws_kms_key` and `kms_master_key_id` to queues; S3 buckets require encryption; RDS/DynamoDB encryption. If the example creates these resources, configure them with customer-managed KMS keys.
 - **The example's README.md** must accurately reflect the actual `main.tf` code. The usage snippet and Inputs table must match the real example code exactly. Do not write a simplified snippet that omits variables. See [Example README Accuracy](#example-readme-accuracy) for details.
 
+### Full Example Validation Flow (Before Implementing Tests)
+
+> **Run this flow for every example you create, before writing or running Terratest.** It catches configuration errors, provider schema mismatches, and policy violations early, reducing toil and churn.
+
+After creating `examples/complete/` (including `main.tf`, `variables.tf`, `outputs.tf`, `versions.tf`, `test.tfvars`), run the full validation flow **from the repository root**:
+
+1. **tflint** — Lint the example:
+   ```bash
+   make lint
+   ```
+
+2. **init** — Initialize Terraform in the example directory:
+   ```bash
+   cd examples/complete && terraform init
+   ```
+
+3. **validate** — Validate configuration:
+   ```bash
+   cd examples/complete && terraform validate
+   ```
+
+4. **plan** — Run plan with test.tfvars:
+   ```bash
+   cd examples/complete && terraform plan -var-file=test.tfvars
+   ```
+
+5. **apply** — Deploy the example (requires cloud provider credentials):
+   ```bash
+   cd examples/complete && terraform apply -var-file=test.tfvars -auto-approve
+   ```
+   The user must ensure cloud provider credentials are available (e.g., AWS profile, Azure service principal, GCP service account). If the agent cannot interact with the API due to credential issues, prompt the user to fix credentials and retry.
+
+6. **destroy** — Tear down:
+   ```bash
+   cd examples/complete && terraform destroy -var-file=test.tfvars -auto-approve
+   ```
+
+**Fix any failures before implementing tests.** Do not proceed to Terratest until all six steps succeed. This ensures the example is deployable and correct before tests depend on it.
+
 ### Example README Accuracy
 
 > **This is frequently violated.** Models often write a simplified usage snippet that omits variables, or list outputs that don't exist in the actual `outputs.tf`. The example README must be a faithful mirror of the actual example code.
@@ -939,6 +978,35 @@ func TestComplete(t *testing.T) {
 - `TestComposableComplete` — Verifies Terraform outputs, calls cloud API to check configuration, AND performs write operations that exercise the resource (e.g., writing an object to a bucket, inserting a record into a database, invoking a function, etc.)
 - `TestComposableCompleteReadonly` — Verifies Terraform outputs and calls cloud API to check configuration ONLY. No write operations. Focused on verifying resource existence, attributes, and security settings via read-only API calls.
 
+### Terratest / Go Code Quality Review (Before Running Tests)
+
+> **Run this flow for every Terratest implementation, before running `make test` or `make check`.** It catches lint errors, missing dependencies, and build failures early.
+
+After writing or updating test code in `tests/`, run the following **from the repository root**:
+
+1. **golangci-lint** — Lint Go code:
+   ```bash
+   golangci-lint run ./...
+   ```
+   Or use pre-commit: `pre-commit run golangci-lint --all-files`
+
+2. **go get -u ./...** — Update dependencies to latest compatible versions:
+   ```bash
+   go get -u ./...
+   ```
+
+3. **go mod tidy** — Prune unused dependencies and update `go.sum`:
+   ```bash
+   go mod tidy
+   ```
+
+4. **go build** — Verify the test code compiles:
+   ```bash
+   go build ./...
+   ```
+
+**Fix any failures before running tests.** Do not proceed to `make test` until all four steps succeed. Missing `go.sum` entries or lint errors cause CI failures.
+
 ## Makefile Standards
 
 Every module must have a Makefile with these targets:
@@ -1046,9 +1114,17 @@ When asked to create a new primitive module, follow this process:
    - Create dependencies (resource group for Azure, etc.)
    - Make it deployable
 
+4a. **Run full example validation flow before implementing tests**
+   - Run tflint, init, validate, plan, apply, destroy for `examples/complete/` (see [Full Example Validation Flow](#full-example-validation-flow-before-implementing-tests))
+   - Fix any failures before proceeding to Terratest
+
 5. **Write Terratest**
    - `tests/<resource>_test.go`
    - Deploy example, verify outputs, cleanup
+
+5a. **Run Terratest / Go code quality review before running tests**
+   - Run golangci-lint, go get -u ./..., go mod tidy, go build (see [Terratest / Go Code Quality Review](#terratest--go-code-quality-review-before-running-tests))
+   - Fix any failures before running `make test`
 
 6. **Add supporting files**
    - Standard files (LICENSE, NOTICE, etc.)
@@ -1057,9 +1133,9 @@ When asked to create a new primitive module, follow this process:
 7. **Validate**
 ```bash
    make configure
-   make env  # Set cloud provider credentials
    make check  # Run all validation
 ```
+   Ensure cloud provider credentials are available before running `make check`. If credential issues prevent API interaction, prompt the user to fix credentials and retry.
 
 8. **Generate documentation**
 ```bash
@@ -1101,6 +1177,7 @@ When transforming the skeleton into a new primitive module, complete ALL of thes
 Before considering the module complete, walk through EVERY item below. Each item corresponds to a defect found in prior AI-generated modules.
 
 ### Tests
+- [ ] Has the Terratest / Go code quality review (golangci-lint, go get -u ./..., go mod tidy, go build) been run successfully before running tests?
 - [ ] Do ALL test assertions use `assert.Equal` with specific expected values (not `assert.NotEmpty`)?
 - [ ] Does the functional test (`post_deploy_functional`) include at least one write operation (send message, put object, etc.)?
 - [ ] Does the readonly test (`post_deploy_functional_readonly`) call a DIFFERENT function than the functional test?
@@ -1126,6 +1203,7 @@ Before considering the module complete, walk through EVERY item below. Each item
 - [ ] If `id` equals another attribute (like `url`), does the `id` description clarify the overlap?
 
 ### Example
+- [ ] Has the full example validation flow (tflint, init, validate, plan, apply, destroy) been run successfully for `examples/complete/` before implementing tests?
 - [ ] Does `examples/complete/variables.tf` define EVERY variable from the root `variables.tf`?
 - [ ] Does `examples/complete/main.tf` pass through ALL those variables to the module?
 - [ ] Does `examples/complete/outputs.tf` expose EVERY output that the tests consume (e.g., `terraform.Output(t, ..., "desired_state")` requires that output)?
