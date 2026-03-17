@@ -20,9 +20,11 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
 		pipeArn := terraform.Output(t, ctx.TerratestTerraformOptions(), "arn")
 		pipeId := terraform.Output(t, ctx.TerratestTerraformOptions(), "id")
+		pipeKmsKeyIdentifier := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_identifier")
 
 		require.NotEmpty(t, pipeName, "Pipe name should be set")
 		require.NotEmpty(t, pipeArn, "Pipe ARN should be set")
+		require.NotEmpty(t, pipeKmsKeyIdentifier, "Pipe KMS key identifier should be set")
 		assert.Equal(t, pipeName, pipeId, "Pipe ID should equal pipe name")
 		require.Regexp(t, `^arn:aws:pipes:`, pipeArn, "Pipe ARN should be a valid Pipes ARN")
 	})
@@ -30,6 +32,8 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 	t.Run("VerifyPipeViaAWSAPI", func(t *testing.T) {
 		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
 		desiredState := terraform.Output(t, ctx.TerratestTerraformOptions(), "desired_state")
+		expectedKmsKeyIdentifier := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_identifier")
+		expectedEnrichment := terraform.Output(t, ctx.TerratestTerraformOptions(), "enrichment")
 
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		require.NoError(t, err)
@@ -44,6 +48,8 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 		assert.Equal(t, pipeName, *output.Name, "Pipe name should match")
 		assert.Equal(t, string(desiredState), string(output.DesiredState), "Pipe desired state should match")
 		assert.Contains(t, []string{"RUNNING", "STOPPED", "CREATING", "UPDATING"}, string(output.CurrentState), "Pipe should have valid current state")
+		assert.Equal(t, expectedKmsKeyIdentifier, aws.ToString(output.KmsKeyIdentifier), "Pipe KMS key identifier should match output")
+		assert.Equal(t, expectedEnrichment, aws.ToString(output.Enrichment), "Pipe enrichment should match output")
 	})
 
 	t.Run("ExercisePipeWithWrite", func(t *testing.T) {

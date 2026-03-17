@@ -62,6 +62,24 @@ resource "aws_kms_key" "sqs" {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
         }
+      },
+      {
+        Sid    = "Allow EventBridge Pipes to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "pipes.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
       }
     ]
   })
@@ -172,7 +190,7 @@ module "pipe" {
   description        = var.description
   desired_state      = var.desired_state
   enrichment         = var.enrichment
-  kms_key_identifier = var.kms_key_identifier
+  kms_key_identifier = coalesce(var.kms_key_identifier, aws_kms_key.sqs.arn)
 
   enrichment_parameters = var.enrichment_parameters
   log_configuration     = var.log_configuration

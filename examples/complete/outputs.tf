@@ -25,6 +25,11 @@ output "name" {
   value       = module.pipe.name
 }
 
+output "description" {
+  description = "The description of the pipe."
+  value       = module.pipe.description
+}
+
 output "desired_state" {
   description = "The desired state of the pipe (RUNNING or STOPPED)."
   value       = module.pipe.desired_state
@@ -43,4 +48,19 @@ output "target" {
 output "role_arn" {
   description = "The ARN of the IAM role used by the pipe."
   value       = module.pipe.role_arn
+}
+
+output "enrichment" {
+  description = "The ARN of the enrichment resource, if configured."
+  value       = module.pipe.enrichment
+}
+
+output "kms_key_identifier" {
+  description = "The KMS key identifier used for pipe-level encryption."
+  value       = module.pipe.kms_key_identifier
+}
+
+output "tags_all" {
+  description = "Map of tags assigned to the resource, including those inherited from the provider."
+  value       = module.pipe.tags_all
 }

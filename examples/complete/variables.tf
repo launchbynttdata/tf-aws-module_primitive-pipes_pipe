@@ -113,7 +113,7 @@ variable "log_configuration" {
       output_format = optional(string)
       prefix        = optional(string)
     }))
-    include_execution_data = optional(set(string))
+    include_execution_data = optional(list(string))
     level                  = string
   })
   default = null

@@ -19,7 +19,7 @@ module "pipe" {
   description         = var.description
   desired_state       = var.desired_state
   enrichment          = var.enrichment
-  kms_key_identifier  = var.kms_key_identifier
+  kms_key_identifier  = coalesce(var.kms_key_identifier, aws_kms_key.sqs.arn)
 
   enrichment_parameters = var.enrichment_parameters
   log_configuration    = var.log_configuration
@@ -59,10 +59,14 @@ module "pipe" {
 | id | The ID of the pipe |
 | arn | The ARN of the pipe |
 | name | The name of the pipe |
+| description | The description of the pipe |
 | desired_state | The desired state of the pipe (RUNNING or STOPPED) |
 | source | The ARN of the source resource |
 | target | The ARN of the target resource |
 | role_arn | The ARN of the IAM role |
+| enrichment | The ARN of the enrichment resource, if configured |
+| kms_key_identifier | The KMS key identifier used for pipe-level encryption |
+| tags_all | Map of tags assigned to the resource, including inherited tags |
 
 ## Running the Example
 
@@ -71,6 +75,17 @@ terraform init
 terraform plan -var-file=test.tfvars
 terraform apply -var-file=test.tfvars
 ```
+
+## Functional Test Idempotency Exception
+
+The functional test suites for this example intentionally set `IS_TERRAFORM_IDEMPOTENT_APPLY = false`.
+
+This exception is currently required due to upstream behavior outside this module:
+
+- The AWS provider has an open `aws_pipes_pipe` stability issue where nested dynamic blocks can produce repeated in-place changes across applies even when configuration is unchanged: [hashicorp/terraform-provider-aws#40007](https://github.com/hashicorp/terraform-provider-aws/issues/40007).
+- AWS EventBridge Pipes creation/update behavior is asynchronous and eventually consistent for pipe polling/startup, which can introduce transient state timing differences during immediate re-apply windows in automation:
+  - [Starting or stopping an Amazon EventBridge pipe](https://docs.aws.amazon.com/eventbridge/latest/userguide/pipes-start-stop.html)
+  - [Amazon Kinesis stream as a source for EventBridge Pipes](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-pipes-kinesis.html)
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -124,7 +139,7 @@ terraform apply -var-file=test.tfvars
 | <a name="input_enrichment"></a> [enrichment](#input\_enrichment) | ARN of an enrichment resource. | `string` | `null` | no |
 | <a name="input_kms_key_identifier"></a> [kms\_key\_identifier](#input\_kms\_key\_identifier) | KMS key for pipe encryption. | `string` | `null` | no |
 | <a name="input_enrichment_parameters"></a> [enrichment\_parameters](#input\_enrichment\_parameters) | Enrichment parameters. | <pre>object({<br/>    http_parameters = optional(object({<br/>      header_parameters       = optional(map(string))<br/>      path_parameter_values   = optional(list(string))<br/>      query_string_parameters = optional(map(string))<br/>    }))<br/>    input_template = optional(string)<br/>  })</pre> | `null` | no |
-| <a name="input_log_configuration"></a> [log\_configuration](#input\_log\_configuration) | Log configuration for the pipe. | <pre>object({<br/>    cloudwatch_logs_log_destination = optional(object({<br/>      log_group_arn = string<br/>    }))<br/>    firehose_log_destination = optional(object({<br/>      delivery_stream_arn = string<br/>    }))<br/>    s3_log_destination = optional(object({<br/>      bucket_name   = string<br/>      bucket_owner  = string<br/>      output_format = optional(string)<br/>      prefix        = optional(string)<br/>    }))<br/>    include_execution_data = optional(set(string))<br/>    level                  = string<br/>  })</pre> | `null` | no |
+| <a name="input_log_configuration"></a> [log\_configuration](#input\_log\_configuration) | Log configuration for the pipe. | <pre>object({<br/>    cloudwatch_logs_log_destination = optional(object({<br/>      log_group_arn = string<br/>    }))<br/>    firehose_log_destination = optional(object({<br/>      delivery_stream_arn = string<br/>    }))<br/>    s3_log_destination = optional(object({<br/>      bucket_name   = string<br/>      bucket_owner  = string<br/>      output_format = optional(string)<br/>      prefix        = optional(string)<br/>    }))<br/>    include_execution_data = optional(list(string))<br/>    level                  = string<br/>  })</pre> | `null` | no |
 | <a name="input_source_parameters"></a> [source\_parameters](#input\_source\_parameters) | Source parameters for the pipe. | `any` | `null` | no |
 | <a name="input_target_parameters"></a> [target\_parameters](#input\_target\_parameters) | Target parameters for the pipe. | `any` | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags for the resources. | `map(string)` | `{}` | no |
@@ -136,8 +151,12 @@ terraform apply -var-file=test.tfvars
 | <a name="output_id"></a> [id](#output\_id) | The ID of the pipe. |
 | <a name="output_arn"></a> [arn](#output\_arn) | The ARN of the pipe. |
 | <a name="output_name"></a> [name](#output\_name) | The name of the pipe. |
+| <a name="output_description"></a> [description](#output\_description) | The description of the pipe. |
 | <a name="output_desired_state"></a> [desired\_state](#output\_desired\_state) | The desired state of the pipe (RUNNING or STOPPED). |
 | <a name="output_source"></a> [source](#output\_source) | The ARN of the source resource. |
 | <a name="output_target"></a> [target](#output\_target) | The ARN of the target resource. |
 | <a name="output_role_arn"></a> [role\_arn](#output\_role\_arn) | The ARN of the IAM role used by the pipe. |
+| <a name="output_enrichment"></a> [enrichment](#output\_enrichment) | The ARN of the enrichment resource, if configured. |
+| <a name="output_kms_key_identifier"></a> [kms\_key\_identifier](#output\_kms\_key\_identifier) | The KMS key identifier used for pipe-level encryption. |
+| <a name="output_tags_all"></a> [tags\_all](#output\_tags\_all) | Map of tags assigned to the resource, including those inherited from the provider. |
 <!-- END_TF_DOCS -->

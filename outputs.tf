@@ -55,6 +55,11 @@ output "enrichment" {
   value       = aws_pipes_pipe.pipe.enrichment
 }
 
+output "kms_key_identifier" {
+  description = "The KMS key identifier used for pipe-level encryption."
+  value       = aws_pipes_pipe.pipe.kms_key_identifier
+}
+
 output "tags_all" {
   description = "Map of tags assigned to the resource, including those inherited from the provider."
   value       = aws_pipes_pipe.pipe.tags_all

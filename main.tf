@@ -415,4 +415,11 @@ resource "aws_pipes_pipe" "pipe" {
       }
     }
   }
+
+  lifecycle {
+    precondition {
+      condition     = (var.name == null) != (var.name_prefix == null)
+      error_message = "Exactly one of name or name_prefix must be set."
+    }
+  }
 }

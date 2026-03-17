@@ -140,7 +140,7 @@ variable "log_configuration" {
     - cloudwatch_logs_log_destination: log_group_arn
     - firehose_log_destination: delivery_stream_arn
     - s3_log_destination: bucket_name, bucket_owner, output_format, prefix
-    - include_execution_data: set of IncludeExecutionDataOption values
+    - include_execution_data: list of IncludeExecutionDataOption values
     - level: OFF, ERROR, INFO, TRACE (required)
   EOT
   type = object({
@@ -156,15 +156,21 @@ variable "log_configuration" {
       output_format = optional(string) # PlainText, Json
       prefix        = optional(string)
     }))
-    include_execution_data = optional(set(string)) # INCLUDE, EXCLUDE
-    level                  = string                # OFF, ERROR, INFO, TRACE
+    include_execution_data = optional(list(string)) # INCLUDE, EXCLUDE
+    level                  = string                 # OFF, ERROR, INFO, TRACE
   })
   default = null
+
+  validation {
+    condition     = var.log_configuration == null ? true : contains(["OFF", "ERROR", "INFO", "TRACE"], var.log_configuration.level)
+    error_message = "Log configuration level must be one of: OFF, ERROR, INFO, TRACE."
+  }
 }
 
 variable "source_parameters" {
   description = <<-EOT
-    Source-specific parameters. Supports filter_criteria and one of:
+    Source-specific parameters. Intentionally typed as `any` to mirror provider schema evolution without frequent breaking changes.
+    Supports filter_criteria and one of:
     activemq_broker_parameters, dynamodb_stream_parameters, kinesis_stream_parameters,
     managed_streaming_kafka_parameters, rabbitmq_broker_parameters,
     self_managed_kafka_parameters, sqs_queue_parameters.
@@ -176,7 +182,8 @@ variable "source_parameters" {
 
 variable "target_parameters" {
   description = <<-EOT
-    Target-specific parameters. Supports input_template and one of:
+    Target-specific parameters. Intentionally typed as `any` to mirror provider schema evolution without frequent breaking changes.
+    Supports input_template and one of:
     batch_job_parameters, cloudwatch_logs_parameters, ecs_task_parameters,
     eventbridge_event_bus_parameters, http_parameters, kinesis_stream_parameters,
     lambda_function_parameters, redshift_data_parameters, sagemaker_pipeline_parameters,
