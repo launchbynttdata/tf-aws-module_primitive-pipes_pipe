@@ -100,8 +100,8 @@ This exception is currently required due to upstream behavior outside this modul
 
 | Name | Version |
 |------|---------|
-| <a name="provider_random"></a> [random](#provider\_random) | 3.8.1 |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 5.100.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.8.1 |
 
 ## Modules
 
