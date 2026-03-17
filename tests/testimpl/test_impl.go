@@ -33,7 +33,7 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
 		desiredState := terraform.Output(t, ctx.TerratestTerraformOptions(), "desired_state")
 		expectedKmsKeyIdentifier := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_identifier")
-		expectedEnrichment := terraform.Output(t, ctx.TerratestTerraformOptions(), "enrichment")
+		expectedEnrichment, _ := terraform.OutputE(t, ctx.TerratestTerraformOptions(), "enrichment")
 
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		require.NoError(t, err)

@@ -85,8 +85,14 @@ resource "aws_kms_key" "sqs" {
   })
 }
 
+resource "random_string" "kms_alias_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
 resource "aws_kms_alias" "sqs" {
-  name          = "alias/example-pipes-sqs-enc"
+  name          = "alias/example-pipes-sqs-enc-${random_string.kms_alias_suffix.result}"
   target_key_id = aws_kms_key.sqs.key_id
 }
 
