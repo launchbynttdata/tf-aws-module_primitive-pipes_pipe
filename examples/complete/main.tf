@@ -182,10 +182,73 @@ resource "aws_sqs_queue" "target" {
   tags                              = var.tags
 }
 
+# Enrichment Lambda: adds "enriched": true to message body so tests can verify it ran
+data "archive_file" "enrichment" {
+  type        = "zip"
+  output_path = "${path.module}/enrichment.zip"
+  source {
+    content  = <<-EOT
+import json
+def lambda_handler(event, context):
+    record = event[0]
+    body = json.loads(record["body"])
+    body["enriched"] = True
+    return body
+EOT
+    filename = "index.py"
+  }
+}
+
+resource "aws_iam_role" "enrichment" {
+  name = module.resource_names["enrichment_lambda"].standard
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = "sts:AssumeRole"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "enrichment" {
+  role       = aws_iam_role.enrichment.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_lambda_function" "enrichment" {
+  filename         = data.archive_file.enrichment.output_path
+  function_name    = module.resource_names["enrichment_lambda"].standard
+  role             = aws_iam_role.enrichment.arn
+  handler          = "index.lambda_handler"
+  source_code_hash = data.archive_file.enrichment.output_base64sha256
+  runtime          = "python3.12"
+}
+
+resource "aws_iam_role_policy" "enrichment" {
+  role = aws_iam_role.pipe.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "lambda:InvokeFunction"
+      Resource = aws_lambda_function.enrichment.arn
+    }]
+  })
+}
+
 module "pipe" {
   source = "../.."
 
-  depends_on = [aws_iam_role_policy.source, aws_iam_role_policy.target]
+  depends_on = [
+    aws_iam_role_policy.source,
+    aws_iam_role_policy.target,
+    aws_iam_role_policy.enrichment,
+  ]
 
   name        = var.name != null ? var.name : (var.name_prefix == null ? module.resource_names["pipe"].standard : null)
   name_prefix = var.name != null ? null : var.name_prefix
@@ -195,7 +258,7 @@ module "pipe" {
 
   description        = var.description
   desired_state      = var.desired_state
-  enrichment         = var.enrichment
+  enrichment         = aws_lambda_function.enrichment.arn
   kms_key_identifier = coalesce(var.kms_key_identifier, aws_kms_key.sqs.arn)
 
   enrichment_parameters = var.enrichment_parameters

@@ -17,10 +17,11 @@ variable "resource_names_map" {
     max_length = number
   }))
   default = {
-    iam_role     = { name = "iamrole1", max_length = 64 }
-    source_queue = { name = "sqsqueue1", max_length = 80 }
-    target_queue = { name = "sqsqueue2", max_length = 80 }
-    pipe         = { name = "pipe1", max_length = 64 }
+    enrichment_lambda = { name = "enrich1", max_length = 64 }
+    iam_role          = { name = "iamrole1", max_length = 64 }
+    source_queue      = { name = "sqsqueue1", max_length = 80 }
+    target_queue      = { name = "sqsqueue2", max_length = 80 }
+    pipe              = { name = "pipe1", max_length = 64 }
   }
 }
 
@@ -71,12 +72,6 @@ variable "desired_state" {
   description = "Desired state of the pipe (RUNNING or STOPPED)."
   type        = string
   default     = "RUNNING"
-}
-
-variable "enrichment" {
-  description = "ARN of an enrichment resource."
-  type        = string
-  default     = null
 }
 
 variable "kms_key_identifier" {

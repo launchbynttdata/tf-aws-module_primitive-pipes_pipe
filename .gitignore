@@ -48,6 +48,9 @@ provider.tf
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
 
+# Generated Lambda deployment packages
+**/enrichment.zip
+
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
