@@ -37,5 +37,5 @@ func TestPipesPipeCompleteReadonly(t *testing.T) {
 		}).
 		Build()
 
-	lib.RunSetupTestTeardown(t, *ctx, testimpl.TestComposableCompleteReadonly)
+	lib.RunNonDestructiveTest(t, *ctx, testimpl.TestComposableCompleteReadonly)
 }
