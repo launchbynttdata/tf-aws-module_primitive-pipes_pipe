@@ -17,10 +17,10 @@ import (
 
 func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 	t.Run("VerifyTerraformOutputs", func(t *testing.T) {
-		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
-		pipeArn := terraform.Output(t, ctx.TerratestTerraformOptions(), "arn")
-		pipeId := terraform.Output(t, ctx.TerratestTerraformOptions(), "id")
-		pipeKmsKeyIdentifier := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_identifier")
+		pipeName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "name")
+		pipeArn := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "arn")
+		pipeId := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "id")
+		pipeKmsKeyIdentifier := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "kms_key_identifier")
 
 		require.NotEmpty(t, pipeName, "Pipe name should be set")
 		require.NotEmpty(t, pipeArn, "Pipe ARN should be set")
@@ -30,9 +30,9 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 	})
 
 	t.Run("VerifyPipeViaAWSAPI", func(t *testing.T) {
-		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
-		desiredState := terraform.Output(t, ctx.TerratestTerraformOptions(), "desired_state")
-		expectedKmsKeyIdentifier := terraform.Output(t, ctx.TerratestTerraformOptions(), "kms_key_identifier")
+		pipeName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "name")
+		desiredState := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "desired_state")
+		expectedKmsKeyIdentifier := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "kms_key_identifier")
 
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		require.NoError(t, err)
@@ -49,13 +49,13 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 		assert.Contains(t, []string{"RUNNING", "STOPPED", "CREATING", "UPDATING"}, string(output.CurrentState), "Pipe should have valid current state")
 		assert.Equal(t, expectedKmsKeyIdentifier, aws.ToString(output.KmsKeyIdentifier), "Pipe KMS key identifier should match output")
 
-		expectedEnrichment := terraform.Output(t, ctx.TerratestTerraformOptions(), "enrichment")
+		expectedEnrichment := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "enrichment")
 		assert.Equal(t, expectedEnrichment, aws.ToString(output.Enrichment), "Pipe enrichment should match output")
 	})
 
 	t.Run("ExercisePipeWithWrite", func(t *testing.T) {
-		sourceArn := terraform.Output(t, ctx.TerratestTerraformOptions(), "source")
-		targetArn := terraform.Output(t, ctx.TerratestTerraformOptions(), "target")
+		sourceArn := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "source")
+		targetArn := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "target")
 		require.NotEmpty(t, sourceArn, "Source ARN should be set for write test")
 		require.NotEmpty(t, targetArn, "Target ARN should be set for write test")
 		require.True(t, strings.HasPrefix(sourceArn, "arn:aws:sqs:"), "Source should be SQS ARN for this example")
@@ -106,16 +106,16 @@ func TestComposableComplete(t *testing.T, ctx types.TestContext) {
 
 func TestComposableCompleteReadonly(t *testing.T, ctx types.TestContext) {
 	t.Run("VerifyTerraformOutputs", func(t *testing.T) {
-		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
-		pipeArn := terraform.Output(t, ctx.TerratestTerraformOptions(), "arn")
+		pipeName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "name")
+		pipeArn := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "arn")
 
 		require.NotEmpty(t, pipeName, "Pipe name should be set")
 		require.NotEmpty(t, pipeArn, "Pipe ARN should be set")
-		assert.Equal(t, pipeName, terraform.Output(t, ctx.TerratestTerraformOptions(), "id"), "Pipe ID should equal pipe name")
+		assert.Equal(t, pipeName, terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "id"), "Pipe ID should equal pipe name")
 	})
 
 	t.Run("VerifyPipeViaAWSAPIReadonly", func(t *testing.T) {
-		pipeName := terraform.Output(t, ctx.TerratestTerraformOptions(), "name")
+		pipeName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "name")
 
 		cfg, err := config.LoadDefaultConfig(context.Background())
 		require.NoError(t, err)
